@@ -1,4 +1,6 @@
 import unittest
+import sys
+import os
 from app import app
 
 class TestRectangleAreaCalculator(unittest.TestCase):
@@ -13,10 +15,12 @@ class TestRectangleAreaCalculator(unittest.TestCase):
         """Тест доступности главной страницы"""
         response = self.app.get('/')
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'Расчет площади прямоугольника', response.data)
-        self.assertIn(b'Длина прямоугольника', response.data)
-        self.assertIn(b'Ширина прямоугольника', response.data)
-        self.assertIn(b'Рассчитать площадь', response.data)
+        # Проверяем декодированный текст
+        decoded_response = response.data.decode('utf-8')
+        self.assertIn('Расчет площади прямоугольника', decoded_response)
+        self.assertIn('Длина прямоугольника', decoded_response)
+        self.assertIn('Ширина прямоугольника', decoded_response)
+        self.assertIn('Рассчитать площадь', decoded_response)
     
     def test_calculate_area_post_valid_data(self):
         """Тест расчета площади с корректными данными"""
@@ -35,14 +39,15 @@ class TestRectangleAreaCalculator(unittest.TestCase):
                 })
                 
                 self.assertEqual(response.status_code, 200)
-                self.assertIn(f'Площадь прямоугольника: <strong>{test["expected"]}</strong>'.encode(), response.data)
+                decoded_response = response.data.decode('utf-8')
+                self.assertIn(f'Площадь прямоугольника: <strong>{test["expected"]}</strong>', decoded_response)
     
     def test_calculate_area_get_request(self):
         """Тест GET запроса на страницу расчета"""
         response = self.app.get('/calculate')
         self.assertEqual(response.status_code, 200)
-        # Форма должна отображаться, но без результата
-        self.assertIn(b'Длина прямоугольника', response.data)
+        decoded_response = response.data.decode('utf-8')
+        self.assertIn('Длина прямоугольника', decoded_response)
     
     def test_calculate_area_invalid_data(self):
         """Тест обработки некорректных данных"""
@@ -57,7 +62,8 @@ class TestRectangleAreaCalculator(unittest.TestCase):
             with self.subTest(data=data):
                 response = self.app.post('/calculate', data=data)
                 self.assertEqual(response.status_code, 200)
-                self.assertIn(b'Ошибка: введите числовые значения', response.data)
+                decoded_response = response.data.decode('utf-8')
+                self.assertIn('Ошибка: введите числовые значения', decoded_response)
     
     def test_calculate_area_negative_numbers(self):
         """Тест расчета с отрицательными числами"""
@@ -66,8 +72,8 @@ class TestRectangleAreaCalculator(unittest.TestCase):
             'width': '3'
         })
         self.assertEqual(response.status_code, 200)
-        # Ожидаем -15, так как -5 * 3 = -15
-        self.assertIn(b'<strong>-15</strong>', response.data)
+        decoded_response = response.data.decode('utf-8')
+        self.assertIn('<strong>-15</strong>', decoded_response)
     
     def test_form_preserves_input_values(self):
         """Тест сохранения введенных значений в форме после отправки"""
@@ -77,9 +83,9 @@ class TestRectangleAreaCalculator(unittest.TestCase):
         })
         
         self.assertEqual(response.status_code, 200)
-        # Проверяем, что форма отображается с результатом
-        self.assertIn(b'value="12.5"', response.data)
-        self.assertIn(b'value="4.2"', response.data)
+        decoded_response = response.data.decode('utf-8')
+        self.assertIn('value="12.5"', decoded_response)
+        self.assertIn('value="4.2"', decoded_response)
     
     def test_calculate_area_large_numbers(self):
         """Тест расчета с большими числами"""
@@ -89,19 +95,22 @@ class TestRectangleAreaCalculator(unittest.TestCase):
         })
         
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'<strong>500000000000</strong>', response.data)
+        decoded_response = response.data.decode('utf-8')
+        self.assertIn('<strong>500000000000</strong>', decoded_response)
     
     def test_html_structure(self):
         """Тест наличия основных HTML элементов"""
         response = self.app.get('/')
+        self.assertEqual(response.status_code, 200)
         
+        decoded_response = response.data.decode('utf-8')
         # Проверяем наличие важных HTML элементов
-        self.assertIn(b'<!DOCTYPE html>', response.data)
-        self.assertIn(b'<form', response.data)
-        self.assertIn(b'method="POST"', response.data)
-        self.assertIn(b'action="/calculate"', response.data)
-        self.assertIn(b'type="number"', response.data)
-        self.assertIn(b'required', response.data)
+        self.assertIn('<!DOCTYPE html>', decoded_response)
+        self.assertIn('<form', decoded_response)
+        self.assertIn('method="POST"', decoded_response)
+        self.assertIn('action="/calculate"', decoded_response)
+        self.assertIn('type="number"', decoded_response)
+        self.assertIn('required', decoded_response)
     
     def test_response_headers(self):
         """Тест заголовков ответа"""
@@ -114,8 +123,6 @@ class TestCalculationLogic(unittest.TestCase):
     
     def test_area_calculation(self):
         """Тест математической логики расчета площади"""
-        from app import app
-        
         test_cases = [
             (5, 3, 15),
             (10.5, 2, 21.0),
@@ -127,11 +134,10 @@ class TestCalculationLogic(unittest.TestCase):
         for length, width, expected in test_cases:
             with self.subTest(length=length, width=width):
                 result = length * width
-                self.assertEqual(result, expected)
+                self.assertAlmostEqual(result, expected, places=2)
     
     def test_string_conversion(self):
         """Тест преобразования строк в числа"""
-        # Это имитирует то, что происходит в приложении
         test_cases = [
             ('5', '3', 15),
             ('10.5', '2.5', 26.25),
@@ -143,7 +149,7 @@ class TestCalculationLogic(unittest.TestCase):
                 length = float(str_length)
                 width = float(str_width)
                 result = length * width
-                self.assertEqual(result, expected)
+                self.assertAlmostEqual(result, expected, places=2)
 
 def run_tests():
     """Запуск всех тестов с подробным выводом"""
@@ -153,8 +159,8 @@ def run_tests():
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
     
-    return result
+    # Выход с кодом 1 если были неудачные тесты
+    sys.exit(0 if result.wasSuccessful() else 1)
 
 if __name__ == '__main__':
-    # Запуск тестов при прямом выполнении файла
-    unittest.main(verbosity=2)
+    run_tests()

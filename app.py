@@ -22,7 +22,7 @@ def calculate():
         except ValueError:
             area = "Ошибка: введите числовые значения"
     
-    return render_template('index.html', area=area)
+    return render_template('index.htm', area=area)
 
 if __name__ == '__main__':
     app.run(debug=True)

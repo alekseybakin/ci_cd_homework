@@ -5,7 +5,7 @@ app = Flask(__name__)
 @app.route('/')
 def index():
     """Главная страница с формой"""
-    return render_template('index.htm')
+    return render_template('index.html')
 
 @app.route('/calculate', methods=['GET', 'POST'])
 def calculate():
